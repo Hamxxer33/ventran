@@ -36,12 +36,14 @@ describe("launch gate", () => {
   });
 
   it("accepts the shareable invite keys", () => {
-    assert.deepEqual([...ACCESS_KEYS], ["VENTRAN", "$VENTRA"]);
-    assert.equal(accessKeyMatches(" ventran "), true);
-    assert.equal(accessKeyMatches("$ventra"), true);
+    assert.deepEqual([...ACCESS_KEYS], ["1982556"]);
+    assert.equal(accessKeyMatches("1982556"), true);
+    assert.equal(accessKeyMatches(" 1982556 "), true);
+    assert.equal(accessKeyMatches("ventran"), false);
+    assert.equal(accessKeyMatches("$ventra"), false);
     assert.equal(accessKeyMatches("nope"), false);
     assert.equal(accessKeyMatches("desk", "DESK"), true);
-    assert.equal(normalizeAccessKey(" ve nt ra n "), "VENTRAN");
+    assert.equal(normalizeAccessKey(" 1982556 "), "1982556");
   });
 
   it("pads countdown digits", () => {

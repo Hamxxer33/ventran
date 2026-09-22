@@ -1,6 +1,6 @@
 export const LAUNCH_AT_MS = Date.parse("2026-09-29T00:00:00.000Z");
 export const ACCESS_STORAGE_KEY = "ventran-access";
-export const ACCESS_KEYS = ["VENTRAN", "$VENTRA"] as const;
+export const ACCESS_KEYS = ["1982556"] as const;
 
 export type LaunchRemain = {
   totalMs: number;
