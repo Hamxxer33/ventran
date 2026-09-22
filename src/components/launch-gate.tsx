@@ -52,6 +52,35 @@ function LaunchRobot() {
   );
 }
 
+function LaunchSilhouette() {
+  return (
+    <div className="launch-gate-blur min-h-dvh bg-background" aria-hidden="true">
+      <div className="border-b border-border bg-card">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
+          <div className="size-7 rounded-sm bg-foreground" />
+          <div className="h-3 w-24 rounded-sm bg-card-2" />
+          <div className="ml-auto h-8 w-28 rounded-sm bg-card-2" />
+        </div>
+      </div>
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 9 }, (_, index) => (
+          <div key={index} className="overflow-hidden rounded-lg bg-card shadow-[var(--shadow-border)]">
+            <div className="h-24 bg-card-2" />
+            <div className="space-y-2 p-4">
+              <div className="h-3 w-4/5 rounded-sm bg-card-2" />
+              <div className="h-3 w-2/5 rounded-sm bg-card-2" />
+              <div className="mt-4 flex gap-2">
+                <div className="h-8 flex-1 rounded-sm bg-card-2" />
+                <div className="h-8 flex-1 rounded-sm bg-card-2" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Countdown() {
   const [now, setNow] = useState<number | null>(null);
 
@@ -121,54 +150,54 @@ function LaunchGateOverlay({ onUnlock }: { onUnlock: () => void }) {
       <div className="launch-gate-stage">
         <LaunchRobot />
         <div className="launch-gate-panel">
-        <div className="flex items-center gap-2 text-foreground">
-          <VentranMark className="size-8" />
-          <span className="text-lg font-semibold tracking-tight">Ventran</span>
-        </div>
-        <h1 id="launch-gate-title" className="mt-5 text-3xl font-semibold tracking-tight text-foreground">
-          Trade what's next
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          The desk opens 29 September 2026. Watch the clock, or enter an invite key to go in now.
-        </p>
-        <div className="mt-6">
-          <Countdown />
-        </div>
-        <form className="mt-6 space-y-3" onSubmit={submit}>
-          <label htmlFor={inputId} className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <KeyRound className="size-4 text-muted" />
-            Invite key
-          </label>
-          <div className={cn("flex flex-col gap-2 sm:flex-row", shake > 0 && "launch-key-shake")} key={shake}>
-            <Input
-              ref={inputRef}
-              id={inputId}
-              value={value}
-              onChange={(event) => {
-                setValue(event.target.value);
-                if (error) setError(false);
-              }}
-              placeholder="Enter access key"
-              autoComplete="off"
-              autoCapitalize="characters"
-              spellCheck={false}
-              aria-invalid={error}
-              aria-describedby={error ? errorId : undefined}
-              className="flex-1"
-            />
-            <Button type="submit" className="w-full sm:w-auto">
-              Unlock
-            </Button>
+          <div className="flex items-center gap-2 text-foreground">
+            <VentranMark className="size-8" />
+            <span className="text-lg font-semibold tracking-tight">Ventran</span>
           </div>
-          {error ? (
-            <p id={errorId} className="text-sm text-no">
-              That key does not open the desk.
-            </p>
-          ) : (
-            <p className="text-xs text-subtle">Keys are issued by the Ventran desk.</p>
-          )}
-        </form>
-      </div>
+          <h1 id="launch-gate-title" className="mt-5 text-3xl font-semibold tracking-tight text-foreground">
+            Trade what's next
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            The desk opens 29 September 2026. Watch the clock, or enter an invite key to go in now.
+          </p>
+          <div className="mt-6">
+            <Countdown />
+          </div>
+          <form className="mt-6 space-y-3" onSubmit={submit}>
+            <label htmlFor={inputId} className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <KeyRound className="size-4 text-muted" />
+              Invite key
+            </label>
+            <div className={cn("flex flex-col gap-2 sm:flex-row", shake > 0 && "launch-key-shake")} key={shake}>
+              <Input
+                ref={inputRef}
+                id={inputId}
+                value={value}
+                onChange={(event) => {
+                  setValue(event.target.value);
+                  if (error) setError(false);
+                }}
+                placeholder="Enter access key"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                aria-invalid={error}
+                aria-describedby={error ? errorId : undefined}
+                className="flex-1"
+              />
+              <Button type="submit" className="w-full sm:w-auto">
+                Unlock
+              </Button>
+            </div>
+            {error ? (
+              <p id={errorId} className="text-sm text-no">
+                That key does not open the desk.
+              </p>
+            ) : (
+              <p className="text-xs text-subtle">Keys are issued by the Ventran desk.</p>
+            )}
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -207,9 +236,7 @@ export function LaunchGate({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <div className={cn(locked && "launch-gate-blur")} inert={locked ? true : undefined} aria-hidden={locked || undefined}>
-        {children}
-      </div>
+      {locked ? <LaunchSilhouette /> : children}
       {locked ? <LaunchGateOverlay onUnlock={() => setLocked(false)} /> : null}
     </>
   );
