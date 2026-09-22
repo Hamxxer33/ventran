@@ -156,3 +156,313 @@ html.dark {
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
+
+.launch-gate-blur {
+  filter: blur(16px);
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.launch-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 1.5rem 1rem max(1.5rem, env(safe-area-inset-bottom));
+  background: color-mix(in oklab, var(--color-background) 62%, transparent);
+  pointer-events: auto;
+}
+
+.launch-gate-stage {
+  display: flex;
+  width: min(100%, 28rem);
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.launch-gate-panel {
+  width: 100%;
+  padding: 1.5rem;
+  border-radius: var(--radius-xl);
+  background: color-mix(in oklab, var(--color-card) 92%, transparent);
+  box-shadow: var(--shadow-border-hover);
+}
+
+.launch-robot-track {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  height: 7.25rem;
+  overflow: hidden;
+}
+
+.launch-robot-ground {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.85rem;
+  left: 0.75rem;
+  height: 1px;
+  background: var(--color-border-strong);
+}
+
+.launch-robot-pace {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.5rem;
+  width: 2.75rem;
+  height: 6rem;
+  transform-origin: 50% 50%;
+  animation: launch-robot-pace 8.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform;
+}
+
+.launch-robot {
+  position: relative;
+  width: 2.75rem;
+  height: 6rem;
+}
+
+.launch-robot-antenna {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0.125rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: var(--color-foreground);
+  transform: translateX(-50%);
+}
+
+.launch-robot-antenna::after {
+  content: "";
+  position: absolute;
+  top: -0.28rem;
+  left: 50%;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--color-foreground);
+  transform: translateX(-50%);
+}
+
+.launch-robot-head {
+  position: absolute;
+  top: 0.7rem;
+  left: 50%;
+  display: flex;
+  width: 1.85rem;
+  height: 1.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  border-radius: 0.45rem;
+  background: var(--color-foreground);
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  animation: launch-robot-look 3.2s ease-in-out infinite;
+}
+
+.launch-robot-eye {
+  position: relative;
+  width: 0.38rem;
+  height: 0.38rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-background);
+}
+
+.launch-robot-eye::after {
+  content: "";
+  position: absolute;
+  top: 0.08rem;
+  left: 0.08rem;
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: var(--color-foreground);
+  animation: launch-robot-glance 3.2s ease-in-out infinite;
+}
+
+.launch-robot-torso {
+  position: absolute;
+  top: 2.2rem;
+  left: 50%;
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  border-radius: 0.55rem;
+  background: var(--color-foreground);
+  color: var(--color-background);
+  transform: translateX(-50%);
+}
+
+.launch-robot-mark {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.launch-robot-arm,
+.launch-robot-leg {
+  position: absolute;
+  border-radius: 999px;
+  background: var(--color-foreground);
+  transform-origin: 50% 0%;
+}
+
+.launch-robot-arm {
+  top: 2.4rem;
+  width: 0.32rem;
+  height: 1.2rem;
+}
+
+.launch-robot-arm.is-left {
+  left: 0.05rem;
+  animation: launch-robot-swing-a 0.48s ease-in-out infinite;
+}
+
+.launch-robot-arm.is-right {
+  right: 0.05rem;
+  animation: launch-robot-swing-b 0.48s ease-in-out infinite;
+}
+
+.launch-robot-leg {
+  top: 4.4rem;
+  width: 0.38rem;
+  height: 1.15rem;
+}
+
+.launch-robot-leg.is-left {
+  left: 0.55rem;
+  animation: launch-robot-swing-b 0.48s ease-in-out infinite;
+}
+
+.launch-robot-leg.is-right {
+  right: 0.55rem;
+  animation: launch-robot-swing-a 0.48s ease-in-out infinite;
+}
+
+@keyframes launch-robot-pace {
+  0% {
+    transform: translateX(0) scaleX(1);
+  }
+  44% {
+    transform: translateX(calc(100cqi - 3.75rem)) scaleX(1);
+  }
+  50% {
+    transform: translateX(calc(100cqi - 3.75rem)) scaleX(-1);
+  }
+  94% {
+    transform: translateX(0) scaleX(-1);
+  }
+  100% {
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+@keyframes launch-robot-look {
+  0%,
+  12% {
+    transform: translateX(-50%) rotate(0deg) translateY(0);
+  }
+  28% {
+    transform: translateX(-50%) rotate(-16deg) translateY(-0.22rem);
+  }
+  44% {
+    transform: translateX(-50%) rotate(0deg) translateY(0);
+  }
+  62% {
+    transform: translateX(-50%) rotate(14deg) translateY(0.16rem);
+  }
+  78% {
+    transform: translateX(-50%) rotate(-8deg) translateY(-0.1rem);
+  }
+  100% {
+    transform: translateX(-50%) rotate(0deg) translateY(0);
+  }
+}
+
+@keyframes launch-robot-glance {
+  0%,
+  20% {
+    transform: translate(0, 0);
+  }
+  32% {
+    transform: translate(0.05rem, -0.08rem);
+  }
+  54% {
+    transform: translate(-0.04rem, 0.07rem);
+  }
+  76% {
+    transform: translate(0.06rem, 0.02rem);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes launch-robot-swing-a {
+  0%,
+  100% {
+    transform: rotate(18deg);
+  }
+  50% {
+    transform: rotate(-18deg);
+  }
+}
+
+@keyframes launch-robot-swing-b {
+  0%,
+  100% {
+    transform: rotate(-18deg);
+  }
+  50% {
+    transform: rotate(18deg);
+  }
+}
+
+@keyframes launch-key-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+.launch-key-shake {
+  animation: launch-key-shake 0.42s var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launch-robot-pace,
+  .launch-robot-head,
+  .launch-robot-eye::after,
+  .launch-robot-arm,
+  .launch-robot-leg,
+  .launch-key-shake,
+  .shimmer {
+    animation: none;
+  }
+
+  .launch-robot-pace {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+

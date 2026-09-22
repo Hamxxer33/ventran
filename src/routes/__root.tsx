@@ -1,6 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { LaunchGate } from "@/components/launch-gate";
 import { WalletProvider } from "@/components/wallet/provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
@@ -43,14 +44,16 @@ export const Route = createRootRoute({
         <WalletProvider>
           <AuthProvider>
             <TooltipProvider delayDuration={200}>
-              <Outlet />
-              <Toaster
-                position="bottom-center"
-                toastOptions={{
-                  className:
-                    "!bg-foreground !text-background !border-none !font-sans !rounded-md !shadow-border",
-                }}
-              />
+              <LaunchGate>
+                <Outlet />
+                <Toaster
+                  position="bottom-center"
+                  toastOptions={{
+                    className:
+                      "!bg-foreground !text-background !border-none !font-sans !rounded-md !shadow-border",
+                  }}
+                />
+              </LaunchGate>
             </TooltipProvider>
           </AuthProvider>
         </WalletProvider>
