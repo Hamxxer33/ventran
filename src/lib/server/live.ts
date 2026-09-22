@@ -41,6 +41,7 @@ type Cache = {
 };
 
 let cache: Cache | null = null;
+let headline: Cache | null = null;
 const inflight = new Map<string, Promise<unknown>>();
 
 function once<T>(key: string, fn: () => Promise<T>): Promise<T> {
@@ -104,16 +105,18 @@ async function loadFeed(force = false): Promise<Cache> {
         games.push(g);
       }
       const ids = games.map((g) => g.gameId);
-      const conds: ConditionDetailedData[] = [];
-      for (let i = 0; i < ids.length; i += 25) {
-        const chunk = ids.slice(i, i + 25);
-        const rows = await withTimeout(
-          getConditionsByGameIds({ chainId, gameIds: chunk, extended: true }),
-          12_000,
-          "conditions",
-        );
-        conds.push(...rows);
-      }
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += 25) chunks.push(ids.slice(i, i + 25));
+      const nested = await Promise.all(
+        chunks.map((chunk) =>
+          withTimeout(
+            getConditionsByGameIds({ chainId, gameIds: chunk, extended: true }),
+            12_000,
+            "conditions",
+          ),
+        ),
+      );
+      const conds: ConditionDetailedData[] = nested.flat();
       const byGame = new Map<string, ConditionDetailedData[]>();
       const byId: Record<string, ConditionDetailedData> = {};
       for (const c of conds) {
@@ -129,6 +132,7 @@ async function loadFeed(force = false): Promise<Cache> {
         markets.push(...gameToMarkets(g, byGame.get(g.gameId) ?? [], chainId));
       }
       cache = { at: Date.now(), markets, games, conditions: byId, error: null };
+      headline = cache;
       return cache;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Feed unavailable";
@@ -139,8 +143,97 @@ async function loadFeed(force = false): Promise<Cache> {
   });
 }
 
+function indexConditions(conds: ConditionDetailedData[]) {
+  const byGame = new Map<string, ConditionDetailedData[]>();
+  const byId: Record<string, ConditionDetailedData> = {};
+  for (const c of conds) {
+    byId[c.conditionId] = c;
+    const gid = c.game?.gameId;
+    if (!gid) continue;
+    const list = byGame.get(gid) ?? [];
+    list.push(c);
+    byGame.set(gid, list);
+  }
+  return { byGame, byId };
+}
+
+async function loadHeadline(): Promise<Cache> {
+  if (cache && Date.now() - cache.at < FEED_TTL_MS) return cache;
+  if (headline && Date.now() - headline.at < 15_000) return headline;
+  return once("headline", async () => {
+    const chainId = azuroChainId();
+    try {
+      const [live, prematch] = await Promise.all([
+        withTimeout(
+          getGamesByFilters({
+            chainId,
+            state: GameState.Live,
+            orderBy: GameOrderBy.Turnover,
+            orderDir: OrderDirection.Desc,
+            page: 1,
+            perPage: 10,
+          }),
+          8_000,
+          "live headline",
+        ),
+        withTimeout(
+          getGamesByFilters({
+            chainId,
+            state: GameState.Prematch,
+            orderBy: GameOrderBy.Turnover,
+            orderDir: OrderDirection.Desc,
+            page: 1,
+            perPage: 10,
+          }),
+          8_000,
+          "prematch headline",
+        ),
+      ]);
+      const seen = new Set<string>();
+      const games: GameData[] = [];
+      for (const g of [...live.games, ...prematch.games]) {
+        if (seen.has(g.gameId)) continue;
+        seen.add(g.gameId);
+        games.push(g);
+      }
+      const ids = games.map((g) => g.gameId);
+      const conds = ids.length
+        ? await withTimeout(
+            getConditionsByGameIds({ chainId, gameIds: ids, extended: true }),
+            8_000,
+            "headline conditions",
+          )
+        : [];
+      const { byGame, byId } = indexConditions(conds);
+      const markets: Market[] = [];
+      for (const g of games) {
+        markets.push(...gameToMarkets(g, byGame.get(g.gameId) ?? [], chainId));
+      }
+      headline = { at: Date.now(), markets, games, conditions: byId, error: null };
+      return headline;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Feed unavailable";
+      if (headline) return { ...headline, error: message };
+      if (cache) return { ...cache, error: message };
+      headline = { at: Date.now(), markets: [], games: [], conditions: {}, error: message };
+      return headline;
+    }
+  });
+}
+
 export const listLiveMarkets = createServerFn({ method: "GET" }).handler(async () => {
   const snap = await loadFeed();
+  return {
+    ok: !snap.error || snap.markets.length > 0,
+    error: snap.error,
+    at: snap.at,
+    chainId: azuroChainId(),
+    markets: snap.markets,
+  };
+});
+
+export const listLiveHeadline = createServerFn({ method: "GET" }).handler(async () => {
+  const snap = await loadHeadline();
   return {
     ok: !snap.error || snap.markets.length > 0,
     error: snap.error,

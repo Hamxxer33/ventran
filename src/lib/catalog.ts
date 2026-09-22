@@ -1,5 +1,6 @@
 import { lmsrPrices, type Pool } from "./amm";
 import { MARKETS } from "./markets";
+import { pickLivePrimary } from "@/lib/protocol/map";
 import type { Market } from "./types";
 
 export const TOPICS = [
@@ -202,26 +203,47 @@ export type AzuroLiveItem = { kind: "azuro-live"; market: Market };
 export type HomeFeedItem = FeedItem | LiveFeedItem | AzuroLiveItem;
 
 export function composeHomeFeed(feed: FeedItem[], topic: string, live: Market[] = []): HomeFeedItem[] {
-  const liveCards: HomeFeedItem[] = [];
-  if (topic === "all" || topic === "sports" || topic === "nfl") {
-    const seen = new Set<string>();
-    for (const m of live.filter((x) => x.status === "live")) {
-      const key = m.eventId ?? m.id;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      liveCards.push({ kind: "azuro-live", market: m });
-      if (liveCards.length >= 2) break;
-    }
-  }
+  const liveCards = homeSportsCards(live, topic);
+  const used = new Set(
+    liveCards.map((c) => c.market.eventId).filter((id): id is string => Boolean(id)),
+  );
+  const rest = feed.filter((item) => {
+    if (item.kind === "group") return !used.has(item.id);
+    if (item.kind === "market" && item.market.eventId) return !used.has(item.market.eventId);
+    return true;
+  });
   if (topic === "btc") {
-    return [...PERPS.map((perp) => ({ kind: "live" as const, perp })), ...feed];
+    return [...PERPS.map((perp) => ({ kind: "live" as const, perp })), ...rest];
   }
   if (topic === "arbitrum") {
     const arb = PERPS.filter((p) => p.id === "arb-5m");
-    return [...arb.map((perp) => ({ kind: "live" as const, perp })), ...feed];
+    return [...arb.map((perp) => ({ kind: "live" as const, perp })), ...rest];
   }
-  if (topic !== "all") return [...liveCards, ...feed];
-  const nato = feed.find((x) => x.kind === "group" && x.id === "nato-russia");
-  const rest = feed.filter((x) => !(x.kind === "group" && x.id === "nato-russia"));
-  return nato ? [...liveCards, nato, ...rest] : [...liveCards, ...rest];
+  if (topic !== "all") return [...liveCards, ...rest];
+  const nato = rest.find((x) => x.kind === "group" && x.id === "nato-russia");
+  const withoutNato = rest.filter((x) => !(x.kind === "group" && x.id === "nato-russia"));
+  return nato ? [...liveCards, nato, ...withoutNato] : [...liveCards, ...withoutNato];
+}
+
+function homeSportsCards(live: Market[], topic: string): AzuroLiveItem[] {
+  if (topic !== "all" && topic !== "sports" && topic !== "nfl") return [];
+  const groups = new Map<string, Market[]>();
+  for (const m of live) {
+    if (m.venue !== "azuro") continue;
+    if (topic === "nfl" && !(m.topics ?? []).includes("nfl") && m.sportSlug !== "american-football") continue;
+    const key = m.eventId ?? m.id;
+    const list = groups.get(key) ?? [];
+    list.push(m);
+    groups.set(key, list);
+  }
+  const livePrimary: Market[] = [];
+  const upcoming: Market[] = [];
+  for (const members of groups.values()) {
+    const primary = pickLivePrimary(members);
+    if (!primary) continue;
+    if (primary.status === "live") livePrimary.push(primary);
+    else upcoming.push(primary);
+  }
+  const cap = topic === "sports" || topic === "nfl" ? 6 : 2;
+  return [...livePrimary, ...upcoming].slice(0, cap).map((market) => ({ kind: "azuro-live" as const, market }));
 }

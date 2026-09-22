@@ -1,65 +1,104 @@
 import { Link } from "@tanstack/react-router";
 import { Bookmark } from "lucide-react";
 import type { Market } from "@/lib/types";
-import { formatVol } from "@/lib/format";
+import { formatPct, formatVol } from "@/lib/format";
 import { watchMarket } from "@/lib/watch";
 import { useMarketStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export function LiveGameCard({ market }: { market: Market }) {
   const watched = useMarketStore((s) => s.watchlist.includes(market.id));
-  const a = market.outcomes[0];
-  const b = market.outcomes[1];
-  const pa = market.seed[a?.id ?? ""] ?? 0.5;
-  const pb = market.seed[b?.id ?? ""] ?? 1 - pa;
-  const oa = market.odds?.[a?.id ?? ""] ?? (pa > 0 ? 1 / pa : 0);
-  const ob = market.odds?.[b?.id ?? ""] ?? (pb > 0 ? 1 / pb : 0);
+  const outs = market.outcomes.slice(0, 3);
+  const twoWay = outs.length <= 2;
 
   return (
-    <article className="rounded-lg bg-card p-3 shadow-[var(--shadow-border)]">
-      <div className="flex items-start gap-3">
-        <img src={market.image} alt="" className="size-12 rounded-md object-cover" />
+    <article className="min-w-0 overflow-hidden rounded-lg bg-card p-3 shadow-[var(--shadow-border)]">
+      <div className="flex min-w-0 items-start gap-3">
+        <img
+          src={market.image}
+          alt=""
+          className="size-12 shrink-0 rounded-md object-cover"
+          onError={(e) => {
+            e.currentTarget.src = "/markets/stadium.jpg";
+          }}
+        />
         <div className="min-w-0 flex-1 pt-1">
-          <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
-            Live · {market.leagueName ?? "Sports"}
+          <p className="truncate text-[11px] font-medium tracking-wide text-muted uppercase">
+            {market.status === "live" ? "Live · " : ""}
+            {market.leagueName ?? "Sports"}
           </p>
-          <h3 className="text-sm leading-snug font-medium tracking-tight">{market.eventTitle ?? market.title}</h3>
+          <h3 className="truncate text-sm leading-snug font-medium tracking-tight">
+            {market.eventTitle ?? market.title}
+          </h3>
         </div>
         <button
           type="button"
           aria-label="Watch"
           onClick={() => watchMarket(market.id)}
-          className={cn("rounded-sm p-1.5 text-subtle hover:text-foreground", watched && "text-foreground")}
+          className={cn("shrink-0 rounded-sm p-1.5 text-subtle hover:text-foreground", watched && "text-foreground")}
         >
           <Bookmark className={cn("size-4", watched && "fill-foreground")} />
         </button>
       </div>
-      <p className="mt-2 text-xs text-subtle">{market.rowLabel}</p>
-      <div className="mt-3 flex gap-2">
-        {a && (
-          <Link
-            to="/market/$slug"
-            params={{ slug: market.slug }}
-            search={{ side: a.id }}
-            className="flex min-h-12 flex-1 items-center justify-between rounded-md bg-yes px-3 text-yes-fg"
-          >
-            <span className="text-sm font-semibold">{a.short ?? a.label}</span>
-            <span className="font-mono text-xs tabular-nums">{oa.toFixed(2)}</span>
-          </Link>
-        )}
-        {b && (
-          <Link
-            to="/market/$slug"
-            params={{ slug: market.slug }}
-            search={{ side: b.id }}
-            className="flex min-h-12 flex-1 items-center justify-between rounded-md bg-no px-3 text-no-fg"
-          >
-            <span className="text-sm font-semibold">{b.short ?? b.label}</span>
-            <span className="font-mono text-xs tabular-nums">{ob.toFixed(2)}</span>
-          </Link>
-        )}
-      </div>
-      <p className="mt-2 text-xs text-subtle">{formatVol(market.seedVolume)} · Azuro</p>
+      {market.rowLabel && market.rowLabel !== "To win" && (
+        <p className="mt-2 truncate text-xs text-subtle">{market.rowLabel}</p>
+      )}
+      {twoWay ? (
+        <div className="mt-3 flex min-w-0 gap-2">
+          {outs.map((o, i) => (
+            <Link
+              key={o.id}
+              to="/market/$slug"
+              params={{ slug: market.slug }}
+              search={{ side: o.id }}
+              className={cn(
+                "flex min-h-12 min-w-0 flex-1 items-center justify-between gap-1 rounded-md px-3",
+                i === 0 ? "bg-yes text-yes-fg" : "bg-no text-no-fg",
+              )}
+            >
+              <span className="min-w-0 truncate text-sm font-semibold">{o.short ?? o.label}</span>
+              <span className="shrink-0 font-mono text-xs tabular-nums">
+                {formatPct(market.seed[o.id] ?? 0)}
+              </span>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <ul className="mt-3 space-y-1.5">
+          {outs.map((o) => (
+            <li key={o.id} className="min-w-0">
+              <Link
+                to="/market/$slug"
+                params={{ slug: market.slug }}
+                search={{ side: o.id }}
+                className="flex min-h-10 min-w-0 items-center gap-2 rounded-sm px-1 hover:bg-card-2"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm">{o.short ?? o.label}</span>
+                <span className="shrink-0 font-mono text-sm tabular-nums">{formatPct(market.seed[o.id] ?? 0)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-2 truncate text-xs text-subtle">{formatVol(market.seedVolume)} · Azuro</p>
     </article>
+  );
+}
+
+export function LiveGameCardSkeleton() {
+  return (
+    <div className="min-w-0 animate-pulse rounded-lg bg-card p-3 shadow-[var(--shadow-border)]">
+      <div className="flex gap-3">
+        <div className="size-12 shrink-0 rounded-md bg-card-2" />
+        <div className="min-w-0 flex-1 space-y-2 pt-1">
+          <div className="h-3 w-24 rounded bg-card-2" />
+          <div className="h-4 w-3/4 rounded bg-card-2" />
+        </div>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <div className="h-12 min-w-0 flex-1 rounded-md bg-card-2" />
+        <div className="h-12 min-w-0 flex-1 rounded-md bg-card-2" />
+      </div>
+    </div>
   );
 }

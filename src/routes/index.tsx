@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { TopicBar } from "@/components/layout/header";
 import { EventCard } from "@/components/markets/event-card";
 import { LiveCard } from "@/components/markets/live-card";
-import { LiveGameCard } from "@/components/markets/live-game-card";
+import { LiveGameCard, LiveGameCardSkeleton } from "@/components/markets/live-game-card";
 import { MarketCard } from "@/components/markets/market-card";
 import { Input } from "@/components/ui/input";
 import { composeHomeFeed, marketsForTopic, mergeFeedMarkets, toFeed } from "@/lib/catalog";
@@ -124,9 +124,6 @@ function Home() {
       </div>
       <TopicBar value={topic} onChange={setTopic} />
       <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8">
-        {liveStatus === "loading" && live.length === 0 && (
-          <p className="mb-3 text-xs text-muted">Loading live sports book…</p>
-        )}
         {liveError && live.length === 0 && (
           <p className="mb-3 rounded-md bg-card px-3 py-2 text-xs text-muted shadow-[var(--shadow-border)]">
             Live sports feed is unreachable. Desk markets below are still on the paper book.
@@ -155,7 +152,15 @@ function Home() {
                 : "No markets in this topic yet."}
           </p>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid min-w-0 gap-3 lg:grid-cols-2">
+            {liveStatus === "loading" && live.length === 0 && (topic === "all" || topic === "sports" || topic === "nfl")
+              ? (
+                  <>
+                    <LiveGameCardSkeleton />
+                    <LiveGameCardSkeleton />
+                  </>
+                )
+              : null}
             {list.map((item) =>
               item.kind === "azuro-live" ? (
                 <LiveGameCard key={item.market.id} market={item.market} />

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Market } from "@/lib/types";
-import { listLiveMarkets } from "@/lib/server/live";
+import { listLiveHeadline, listLiveMarkets } from "@/lib/server/live";
 import { impliedFromOdds } from "@/lib/protocol/odds";
 
 export type LiveState = {
@@ -35,8 +35,21 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   chainId: null,
   refresh: async () => {
     if (get().status === "loading" && Date.now() - get().at < 30_000) return;
-    set({ status: get().markets.length ? "ready" : "loading" });
+    const empty = get().markets.length === 0;
+    if (empty) set({ status: "loading" });
     try {
+      if (empty) {
+        const quick = await listLiveHeadline();
+        const indexed = indexOf(quick.markets);
+        set({
+          markets: quick.markets,
+          ...indexed,
+          status: quick.markets.length ? "ready" : "loading",
+          error: quick.error,
+          at: quick.at,
+          chainId: quick.chainId,
+        });
+      }
       const res = await listLiveMarkets();
       const { bySlug, byId } = indexOf(res.markets);
       set({

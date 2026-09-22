@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ConditionDetailedData, GameData } from "@azuro-org/toolkit";
-import { ConditionState } from "@azuro-org/toolkit";
-import { conditionToMarket, gameToMarkets, isTradeableCondition } from "./map.ts";
+import { ConditionState, OutcomeState } from "@azuro-org/toolkit";
+import { conditionToMarket, gameToMarkets, isTradeableCondition, pickLivePrimary } from "./map.ts";
 
 const game = {
   id: "g1",
@@ -60,10 +60,41 @@ describe("conditionToMarket", () => {
     assert.equal(m!.conditionId, "30061abc");
     assert.equal(m!.gameId, "1001");
     assert.equal(m!.category, "sports");
+    assert.equal(m!.rowLabel, "To win");
+    assert.equal(m!.outcomes[0]?.short, "Rams");
+    assert.equal(m!.outcomes[1]?.short, "Giants");
     assert.ok((m!.topics ?? []).includes("nfl"));
     assert.ok(Math.abs((m!.seed["1"] ?? 0) + (m!.seed["2"] ?? 0) - 1) < 1e-9);
     assert.equal(m!.odds?.["1"], 1.8);
     assert.match(m!.resolution, /Azuro protocol oracle/);
+  });
+
+  it("puts draw in the middle and strips gender suffixes", () => {
+    const wnba = {
+      ...game,
+      title: "Atlanta Dream (W) - New York Liberty (W)",
+      participants: [
+        { name: "Atlanta Dream (W)", image: null },
+        { name: "New York Liberty (W)", image: null },
+      ],
+    } as unknown as GameData;
+    const m = conditionToMarket(
+      wnba,
+      cond({
+        conditionId: "w1",
+        title: "Winner",
+        outcomes: [
+          { title: "Draw", outcomeId: "0", odds: "12", sort: "2", hidden: false, state: OutcomeState.Active },
+          { title: "New York Liberty (W)", outcomeId: "2", odds: "1.9", sort: "3", hidden: false, state: OutcomeState.Active },
+          { title: "Atlanta Dream (W)", outcomeId: "1", odds: "2.1", sort: "1", hidden: false, state: OutcomeState.Active },
+        ],
+      }),
+      137,
+    );
+    assert.deepEqual(
+      m!.outcomes.map((o) => o.short),
+      ["Atlanta Dream", "Draw", "Liberty"],
+    );
   });
 
   it("marks finished games resolved and canceled games canceled", () => {
@@ -93,5 +124,56 @@ describe("gameToMarkets", () => {
     assert.ok(rows.length <= 6);
     assert.equal(rows[0]?.rowLabel, "Line 0");
     assert.ok(!rows.some((r) => r.conditionId === "stopped"));
+  });
+
+  it("drops odd/even and player props", () => {
+    const rows = gameToMarkets(game, [
+      cond({
+        conditionId: "oe",
+        title: "New York Giants Total Points Odd/Even (incl. Overtime)",
+        category: "odd_even",
+      }),
+      cond({
+        conditionId: "half",
+        title: "2nd Half - Draw No Bet",
+        category: "winner",
+      }),
+      cond({ conditionId: "win", title: "Winner", category: "winner" }),
+    ], 137);
+    assert.equal(rows.some((r) => r.conditionId === "oe"), false);
+    assert.equal(rows[0]?.conditionId, "win");
+    assert.equal(rows[0]?.rowLabel, "To win");
+    assert.equal(rows[0]?.outcomes[0]?.short, "Rams");
+  });
+});
+
+describe("pickLivePrimary", () => {
+  it("prefers the match winner and skips live props", () => {
+    const rows = gameToMarkets(game, [
+      cond({
+        conditionId: "oe",
+        title: "Odd/Even",
+        category: "odd_even",
+      }),
+      cond({ conditionId: "win", title: "Full Time Result", category: "result" }),
+    ], 137);
+    const liveRows = rows.map((m) => ({ ...m, status: "live" as const }));
+    const primary = pickLivePrimary(liveRows);
+    assert.equal(primary?.conditionId, "win");
+  });
+
+  it("returns nothing when only period props exist", () => {
+    const rows = gameToMarkets(
+      { ...game, state: "Live" } as GameData,
+      [
+        cond({
+          conditionId: "half",
+          title: "2nd Half - Draw No Bet",
+          category: "winner",
+        }),
+      ],
+      137,
+    );
+    assert.equal(pickLivePrimary(rows.map((m) => ({ ...m, status: "live" as const }))), undefined);
   });
 });
